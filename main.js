@@ -30,7 +30,6 @@ const main = async (params) => {
     
     outerContainer.on("click", (e, d) => {
     	const m = d3.pointer(e)
-    	console.log(m)
     	plotContainer.append("rect")
     		.attr("stroke", "steelblue")
     		.attr("fill", "rgba(70, 130, 180, 0.5)")
