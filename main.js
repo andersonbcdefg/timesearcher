@@ -1,5 +1,5 @@
 'use strict';
-import * as lib from "/lib.mjs"
+import * as lib from "./lib.mjs"
 
 const main = async (params) => {
 
