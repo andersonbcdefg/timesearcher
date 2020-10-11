@@ -28,16 +28,30 @@ const main = async (params) => {
 		.attr("class", "path")
       	.attr("d", d => line(d[1]))
     
-    outerContainer.on("click", (e, d) => {
-    	const m = d3.pointer(e)
-    	plotContainer.append("rect")
+    var r = {};
+
+    outerContainer.call(d3.drag()
+    	.subject((e) => { 
+    		let m = d3.pointer(e);
+    		return {x: m[0], y: m[1] }; 
+    	})
+    	.on("start", (e, d) => {
+    		let m = d3.pointer(e)
+    		r.rect = plotContainer.append("rect")
     		.attr("stroke", "steelblue")
     		.attr("fill", "rgba(70, 130, 180, 0.5)")
     		.attr("x", m[0] - params.margin)
     		.attr("y", m[1] - params.margin)
-    		.attr("width", 50)
-    		.attr('height', 50)
-    })
+    		.attr("width", 1)
+    		.attr('height', 1)
+    		r.x = m[0]
+    		r.y = m[1]
+    	})
+    	.on("drag", (e, d) => {
+    		r.rect.attr("width", e.x - r.x)
+    		r.rect.attr("height", e.y - r.y)
+    	})
+    )
 }
 
 const params = {
