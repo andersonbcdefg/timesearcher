@@ -1,0 +1,23 @@
+* {
+	font-family: Avenir;
+} 
+
+body {
+	text-align: center;
+}
+
+h1 {
+	text-align: center;
+	margin: 5px;
+}
+
+span {
+	font-size: 1.5em;
+	font-weight: 100;
+}
+
+svg {
+	display: block;
+	margin: auto;
+	background-color: WhiteSmoke;
+}
