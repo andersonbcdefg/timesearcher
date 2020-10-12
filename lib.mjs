@@ -20,15 +20,15 @@ const fetchData = async () => {
 	return cable;
 }
 
+// Add buttons to manage the state of the application
 const addButtons = (box_mgr) => {
 	const body = d3.select("body")
-	for (let action of ["CREATE", "RESIZE", "DELETE"]) {
+	for (let action of ["CREATE", "EDIT", "DELETE"]) {
 		body.append("button")
 			.text(action)
+			.attr("id", action.toLowerCase())
 			.on("click", function() {
-				let a = action;
-				let s =
-				box_mgr.state = action
+				box_mgr.setState(action);
 			})
 	}
 }
@@ -124,8 +124,19 @@ class BoxManager {
 				box_mgr.boxes = box_mgr.boxes.filter(b => {
 					return b.rect.attr("class") !== "filter-box-hovered";
 				});
+				if (box_mgr.boxes.length == 0) {
+					box_mgr.setState("CREATE");
+
+				}
 			}
 		});
+	}
+
+	setState(state) {
+		this.state = state;
+		d3.selectAll("button").attr("class", "null")
+		d3.select(`#${state.toLowerCase()}`).attr("class", "active")
+		d3.select("#message").text(state !== "DELETE" ? `Click and drag to ${state.toLowerCase()} a filter!`:"Click on a filter to delete it.");
 	}
 
 	get newestBox() {

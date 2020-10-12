@@ -34,6 +34,7 @@ const main = async (params) => {
     window.BM = new lib.BoxManager(outerContainer, plotContainer);
     lib.addButtons(BM);
     lib.addDragFunc(BM);
+    BM.setState("CREATE")
     
 
 }
