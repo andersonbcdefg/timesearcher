@@ -20,6 +20,19 @@ const fetchData = async () => {
 	return cable;
 }
 
+const addButtons = (box_mgr) => {
+	const body = d3.select("body")
+	for (let action of ["CREATE", "RESIZE", "DELETE"]) {
+		body.append("button")
+			.text(action)
+			.on("click", function() {
+				let a = action;
+				let s =
+				box_mgr.state = action
+			})
+	}
+}
+
 // Draw outer SVG container and inner plot container
 // RETURNS: D3 selections for outer & inner containers.
 const makeContainer = (params) => {
@@ -61,15 +74,92 @@ const addAxes = (plotContainer, xScale, yScale, params) => {
 		.call(d3.axisBottom(xScale))
 }
 
+
+// Class to manage all the filter boxes placed on the TimeSearcher
+class BoxManager {
+	constructor(outerContainer, plotContainer) {
+		this.outer = outerContainer;
+		this.plot = plotContainer;
+		this.boxes = [];
+		this.state = "CREATE";
+	}
+
+	createBox(e) {
+		let box = {};
+		// add attributes to box to track its "limits" in the data space?
+		box.x0 = e.x
+		box.y0 = e.y
+		box.rect = this.plot.append("rect")
+    		.attr("class", "filter-box")
+    		.attr("x", box.x0 - params.margin)
+    		.attr("y", box.y0 - params.margin)
+    		.attr("width", 1)
+    		.attr('height', 1)
+    	this.boxes.push(box);
+	}
+
+	resizeNewBox(e) {
+		let r = this.newestBox;
+		r.rect.attr("x", Math.min(e.x, r.x0) - params.margin)
+			.attr("y", Math.min(e.y, r.y0) - params.margin)
+			.attr("width", Math.abs(e.x - r.x0))
+			.attr("height", Math.abs(e.y - r.y0));
+	}
+
+	addNewBoxListeners(e, box_mgr) {
+		let r = this.newestBox;
+		r.rect.on("mouseover", function () {
+			if (box_mgr.state == "DELETE") {
+				d3.select(this)
+					.attr("class", null).attr("class", "filter-box-hovered")
+			}
+		})
+		.on("mouseout", function () {
+			d3.select(this)
+			.attr("class", null).attr("class", "filter-box")
+		})
+		.on("click", function () {
+			if (box_mgr.state == "DELETE") {
+				d3.select(this).node().remove();
+				box_mgr.boxes = box_mgr.boxes.filter(b => {
+					return b.rect.attr("class") !== "filter-box-hovered";
+				});
+			}
+		});
+	}
+
+	get newestBox() {
+		return this.boxes.slice(-1)[0];
+	}
+}
+
+
+// Inspired by: https://bl.ocks.org/michaelwooley/b095fa7ce0e11d771dcb3f035fda1f07
+const addDragFunc = (box_mgr) => {
+    box_mgr.outer.call(d3.drag()
+    	.subject((e) => { 
+    		let m = d3.pointer(e);
+    		return {x: m[0], y: m[1] }; 
+    	})
+    	.on("start", (e) => {
+    		if (box_mgr.state == "CREATE") {
+    			box_mgr.createBox(e);
+    		}
+    	})
+    	.on("drag", (e) => {
+    		if (box_mgr.state == "CREATE") {
+    			box_mgr.resizeNewBox(e);
+    		}
+    	})
+    	.on("end", (e) => {
+    		if (box_mgr.state == "CREATE") {
+    			box_mgr.addNewBoxListeners(e, box_mgr);
+    		}
+    	})
+    )
+}
+
 /*
-
-	
-
-	
-
-	
-
-	
 
 	const line = d3.line()
 		.x(d => xScale(d.month))
@@ -92,4 +182,5 @@ const addAxes = (plotContainer, xScale, yScale, params) => {
 	})
 */
 
-export { fetchData, makeContainer, makeScales, addAxes };
+export { fetchData, addButtons, makeContainer, makeScales, 
+	addAxes, BoxManager, addDragFunc };

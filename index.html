@@ -25,6 +25,23 @@
 	<title>TimeSearcher</title>
 	<script src="d3/d3.js"></script>
 	<script defer type="module" src="main.js"></script>
+	<style>
+		rect.filter-box {
+			stroke: rgba(50, 110, 160, 1);
+		    stroke-width: 2;
+		    fill: rgba(70, 130, 180, 0.3);
+		}
+
+		rect.filter-box-hovered {
+			fill: rgba(180, 80, 80, 0.3);
+    		stroke: salmon;
+		    stroke-width: 2;
+		}
+
+		rect.filter-box-hovered:hover {
+			cursor: url(./delete_small.png) 16 16, auto;
+		}
+	</style>
 </head>
 
 <body>
