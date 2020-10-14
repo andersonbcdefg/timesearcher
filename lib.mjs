@@ -1,23 +1,23 @@
 'use strict';
 
-const params = {
-	margin: 75,
-	width: 600,
-	height: 300
-};
-
 // Fetch and parse cable news dataset
 const fetchData = async () => {
 	const parseTime = d3.timeParse("%Y-%m")
-	const raw_data = await d3.csv("top_100.csv")
-	const cable = raw_data.map(entry => {
+	const res = await d3.csv("top_100.csv")
+	const raw_cable = res.map(entry => {
 		return {
 			name: entry.person,
 			month: parseTime(entry.year_month),
 			screen_time: Number(entry.screen_time_seconds)
 		}
 	});
-	return cable;
+	const cable = Array.from(d3.group(raw_cable, d => d.name)).map(person => {
+		return {
+			name: person[0],
+			values: person[1]
+		}
+	})
+	return [cable, raw_cable];
 }
 
 // Add buttons to manage the state of the application
@@ -38,12 +38,12 @@ const addButtons = (box_mgr) => {
 const makeContainer = (params) => {
 	const outerContainer = d3.select("body")
 		.append("svg")
-		.attr("width", params.width + 2 * params.margin)
-		.attr("height", params.height + 2 * params.margin)
+		.attr("width", params.width + 2 * params.marginX)
+		.attr("height", params.height + 2 * params.marginY)
 		.attr("id", "outerContainer")
 
 	const plotContainer = outerContainer.append("g")
-		.attr('transform', `translate(${params.margin},${params.margin})`)
+		.attr('transform', `translate(${params.marginX},${params.marginY})`)
 	    .attr('id', 'plotContainer');
 
 	return [outerContainer, plotContainer]
@@ -57,7 +57,7 @@ const makeScales = (data, params) => {
 		.range([0, params.width])
 
 	const yScale = d3.scaleLinear()
-		.domain(d3.extent(data, d => d.screen_time))
+		.domain(d3.extent(data, d => d.screen_time * 1.1))
 		.range([params.height, 0])
 
 	return [xScale, yScale];
@@ -74,36 +74,177 @@ const addAxes = (plotContainer, xScale, yScale, params) => {
 		.call(d3.axisBottom(xScale))
 }
 
+const capitalize = (name) => {
+	return name.split(" ").map(n => n.slice(0, 1).toUpperCase() + n.slice(1)).join(" ")
+}
+
+// Inspired by: https://bl.ocks.org/larsenmtl/e3b8b7c2ca4787f77d78f58d41c3da91
+const makeLines = (plotContainer, xScale, yScale, grouped_cable, params) => {
+	const lineGenerator = d3.line()
+		.x(d => xScale(d.month))
+		.y(d => yScale(d.screen_time))
+
+
+	const lines = plotContainer.append("g")
+		.attr("id", "series-group")
+		.selectAll(".series")
+		.data(grouped_cable, d => d.name)
+		.enter()
+		.append("g")
+		.attr("class", "series")
+			
+	
+	lines.append("path")
+		.attr("class", "line")
+      	.attr("d", d => lineGenerator(d.values))
+      	.attr("fill", "none")
+        .attr("stroke", "firebrick")
+        .attr("stroke-width", 1.5)
+
+
+    lines.append("text")
+    	.attr("class", "line-label")
+    	.text(d => capitalize(d.name))
+    	.attr("y", d => yScale(d.values[d.values.length - 1].screen_time))
+    	.attr("x", params.width + 5)
+    	.attr("font-size", 10)
+    	.on("mouseover", function(e) {
+    		d3.select(this).attr("font-weight", "bold")
+    		d3.select(this.parentNode)
+    			.raise()
+    			.select("path")
+    			.attr("stroke-width", 2.5)
+    			.attr("stroke", "#EEB110")
+    	})
+    	.on("mouseout", function(e) {
+    		d3.select(this).attr("font-weight", "normal")
+    		d3.select(this.parentNode)
+    			.select("path")
+    			.attr("stroke-width", 1.5)
+    			.attr("stroke", "firebrick")
+    	})
+}
+
+const filterSeries = (d, filts) => {
+	let values = d.values;
+	for (let filt of filts) {
+		let xrange = values.filter(d => {
+			return (d.month >= filt.xmin && d.month <= filt.xmax);
+		});
+		let yvals = xrange.map(d => d.screen_time);
+		if (Math.max(...yvals) > filt.ymax || Math.min(...yvals) < filt.ymin) return false;
+	}
+	return true;
+}
+
+const updateLines = (filts) => {
+	if (filts.length == 0) {
+		let series = d3.selectAll(".series")
+		series.select(".line")
+			.attr("stroke", "firebrick")
+		series.select(".line-label")
+			.attr("fill", "black")
+			.on("mouseover", function(e) {
+	    		d3.select(this).attr("font-weight", "bold")
+	    		d3.select(this.parentNode)
+	    			.raise()
+	    			.select("path")
+	    			.attr("stroke-width", 2.5)
+	    			.attr("stroke", "#EEB110")
+	    	})
+	    	.on("mouseout", function(e) {
+	    		d3.select(this).attr("font-weight", "normal")
+	    		d3.select(this.parentNode)
+	    			.select("path")
+	    			.attr("stroke-width", 1.5)
+	    			.attr("stroke", "firebrick")
+	    	})
+	} else {
+		let series = d3.selectAll(".series")
+		series.select(".line")
+			.attr("stroke", "grey")
+		series.select(".line-label")
+			.attr("fill", "rgba(180, 180, 180, 0.5)")
+			.on("mouseover", null)
+			.on("mouseout", null)
+		
+		let filtered = series.filter(d => filterSeries(d, filts))
+		
+		filtered.raise()
+			.select(".line")
+			.attr("stroke", "firebrick")
+
+		filtered.select(".line-label")
+			.attr("fill", "black")
+			.on("mouseover", function(e) {
+	    		d3.select(this).attr("font-weight", "bold")
+	    		d3.select(this.parentNode)
+	    			.raise()
+	    			.select("path")
+	    			.attr("stroke-width", 2.5)
+	    			.attr("stroke", "#EEB110")
+	    	})
+	    	.on("mouseout", function(e) {
+	    		d3.select(this).attr("font-weight", "normal")
+	    		d3.select(this.parentNode)
+	    			.select("path")
+	    			.attr("stroke-width", 1.5)
+	    			.attr("stroke", "firebrick")
+	    	})
+	}
+	
+}
+
 
 // Class to manage all the filter boxes placed on the TimeSearcher
 class BoxManager {
-	constructor(outerContainer, plotContainer) {
+	constructor(outerContainer, plotContainer, xScale, yScale, params) {
 		this.outer = outerContainer;
 		this.plot = plotContainer;
+		this.xScale = xScale;
+		this.yScale = yScale;
 		this.boxes = [];
+		this.params = params;
 		this.state = "CREATE";
 	}
 
 	createBox(e) {
 		let box = {};
-		// add attributes to box to track its "limits" in the data space?
-		box.x0 = e.x
-		box.y0 = e.y
+		// X and Y relative to the plot container, not outer container
+		box.x0 = e.x - this.params.marginX;
+		box.y0 = e.y - this.params.marginY;
+		box.x1 = box.x0 + 1;
+		box.y1 = box.y0 + 1;
 		box.rect = this.plot.append("rect")
     		.attr("class", "filter-box")
-    		.attr("x", box.x0 - params.margin)
-    		.attr("y", box.y0 - params.margin)
+    		.attr("x", box.x0)
+    		.attr("y", box.y0)
     		.attr("width", 1)
     		.attr('height', 1)
+    	box.filt = {
+    		xmin: this.xScale.invert(box.x0),
+    		xmax: this.xScale.invert(box.x1),
+    		ymin: this.yScale.invert(box.y1),
+    		ymax: this.yScale.invert(box.y0)
+    	}
     	this.boxes.push(box);
 	}
 
 	resizeNewBox(e) {
-		let r = this.newestBox;
-		r.rect.attr("x", Math.min(e.x, r.x0) - params.margin)
-			.attr("y", Math.min(e.y, r.y0) - params.margin)
-			.attr("width", Math.abs(e.x - r.x0))
-			.attr("height", Math.abs(e.y - r.y0));
+		let box = this.newestBox;
+		box.x1 = Math.min(Math.max(e.x - this.params.marginX, 0), this.params.width);
+		box.y1 = Math.min(Math.max(e.y - this.params.marginY, 0), this.params.height);
+		box.rect.attr("x", Math.min(box.x0, box.x1))
+			.attr("y", Math.min(box.y0, box.y1))
+			.attr("width", Math.abs(box.x0 - box.x1))
+			.attr("height", Math.abs(box.y0 - box.y1));
+		box.filt = {
+    		xmin: this.xScale.invert(Math.min(box.x0, box.x1)),
+    		xmax: this.xScale.invert(Math.max(box.x0, box.x1)),
+    		ymin: this.yScale.invert(Math.max(box.y0, box.y1)),
+    		ymax: this.yScale.invert(Math.min(box.y0, box.y1))
+    	}
+    	updateLines(this.filters);
 	}
 
 	addNewBoxListeners(e, box_mgr) {
@@ -124,9 +265,9 @@ class BoxManager {
 				box_mgr.boxes = box_mgr.boxes.filter(b => {
 					return b.rect.attr("class") !== "filter-box-hovered";
 				});
+				updateLines(box_mgr.filters);
 				if (box_mgr.boxes.length == 0) {
 					box_mgr.setState("CREATE");
-
 				}
 			}
 		});
@@ -141,6 +282,10 @@ class BoxManager {
 
 	get newestBox() {
 		return this.boxes.slice(-1)[0];
+	}
+
+	get filters() {
+		return this.boxes.map(b => b.filt);
 	}
 }
 
@@ -165,33 +310,12 @@ const addDragFunc = (box_mgr) => {
     	.on("end", (e) => {
     		if (box_mgr.state == "CREATE") {
     			box_mgr.addNewBoxListeners(e, box_mgr);
+    			console.log(box_mgr.newestBox.filt)
     		}
     	})
     )
 }
 
-/*
-
-	const line = d3.line()
-		.x(d => xScale(d.month))
-		.y(d => yScale(d.screen_time))
-
-	const grouped = Array.from(d3.group(cable, d => d.name))
-
-	console.log(grouped)
-	
-	const lines = plotContainer.append("g")
-			.attr("fill", "none")
-	        .attr("stroke", "firebrick")
-	        .attr("stroke-width", 1)
-		.selectAll("path")
-      	.data(grouped)
-      	.join("path")
-      		.attr("d", d => line(d[1]))
-	lines.on("click", d => {
-		console.log(this)
-	})
-*/
 
 export { fetchData, addButtons, makeContainer, makeScales, 
-	addAxes, BoxManager, addDragFunc };
+	addAxes, BoxManager, addDragFunc, makeLines, updateLines };
