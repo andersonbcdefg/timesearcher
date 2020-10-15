@@ -2,7 +2,7 @@
 Benjamin Anderson
 
 ### Running the code
-To run, just run a local server with Python from the root directory: `python -m http.server`. Or, just visit https://andersonbcdefg.github.io/timesearcher/. Once the app is running, you can use the "Create", "Edit", and "Delete" buttons to create and manipulate time boxes, or type a name in the search box to filter by name (extra credit feature). You can also mouse over name labels on the right to highlight the associated time series.
+To run, just run a local server with Python from the root directory: `python -m http.server`. Or, just visit https://andersonbcdefg.github.io/timesearcher/.
 
 ### Important Files
 * __index.html:__ Skeletal webpage into which JavaScript code is injected.
@@ -10,10 +10,8 @@ To run, just run a local server with Python from the root directory: `python -m 
 * __lib.js:__ Module containing important functions to build the application, including constructing the plot and adding event handlers.
 * __main.css:__ Styling for the plot and container page.
 
-Other directories contain libraries and assets needed to run the application.
-
 ### Commentary
-I basically finished up on Wednesday, October 14, and started the previous Friday. Probably spent a couple of hours each of those days on average, so I would estimate the whole process took around 15 hours. As expected, drawing the lines was not the hard part, and the interaction was--especially the logic to draw and resize rectangles. I had to think about it for a while and incrementally add features (add a rectangle of fixed size; then let the user draw it; etc.). Deleting was pretty easy, and resizing was hard. I ended up doing it in by designating one corner as the one that can be dragged, which is intuitive enough and works pretty well. 
+I finished on Wednesday, October 14, and started the previous Friday. Probably spent a couple of hours each of those days on average, so I would estimate the whole process took around 15 hours. As expected, drawing the lines was not the hard part, and the interaction was--especially the logic to draw and resize rectangles. I had to think about it for a while and incrementally add features (add a rectangle of fixed size; then let the user draw it; etc.). Deleting was pretty easy, and resizing was hard. I ended up doing it in by designating one corner as the one that can be dragged, which is intuitive enough and works pretty well. 
 
 I anticipated that filtering would be really hard, but once I figured out _conceptually_ how to do it, the coding wasn't so bad. Since D3 selections already have a `filter` method I just had to write the code to determine if a series passes through the box. One edge case is a box that is so narrow that it doesn't actually contain any data (i.e. it is drawn _between_ months). To handle this case, I wrote code to interpolate between the two nearest months. Finally, doing the extra credit only took a few minutes! Once all the filtering logic was there for time boxes, adding a filter for names was straightforward.
 
