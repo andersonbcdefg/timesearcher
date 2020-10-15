@@ -1,4 +1,64 @@
+/* FILE: lib.mjs
+ * AUTHOR: Benjamin Anderson
+ * DESCRIPTION: Helper code for the TimeSearcher application.
+ */
+
 'use strict';
+
+
+// Display introduction / instructions
+const displayIntro = () => {
+	let modal = d3.select("body").append("div")
+		.attr("class", "modal")
+	
+	let msg = modal.append("div")
+		.attr("id", "modal-message")
+		
+	msg.append("h2")
+		.text("Welcome to TimeSearcher!")
+
+	msg.append("p")
+		.text("Draw, edit and delete time boxes to filter the data.")
+	msg.append("p")
+		.text("Use the buttons to toggle between controls.")
+
+	msg.append("button")
+		.text("CREATE")
+		.style("cursor", "auto")
+	msg.append("button")
+		.text("EDIT")
+		.style("cursor", "auto")
+	msg.append("button")
+		.text("DELETE")
+		.style("cursor", "auto")
+
+	msg.append("p")
+		.text("Use the input box to filter by a celebrity's name.")
+
+	msg.append("input")
+		.attr("disabled", "true")
+		.attr("value", "Britney Spears")
+
+	msg.append("p")
+		.text("Hover on a celebrity's name to highlight their line.");
+
+	msg.append("h4")
+		.style("cursor", "pointer")
+		.text("Let's get started!")
+		.style("color", "limegreen")
+		.style("text-decoration", "underline")
+		.on("click", function() {
+			modal.remove();
+		})
+
+	modal.append("div")
+		.attr("id", "close-modal")
+		.style("cursor", "pointer")
+		.text("×")
+		.on("click", function() {
+			modal.remove();
+		})
+}
 
 // Fetch and parse cable news dataset
 const fetchData = async () => {
@@ -21,7 +81,7 @@ const fetchData = async () => {
 }
 
 // Add buttons to manage the state of the application
-const addButtons = (box_mgr) => {
+const addControls = (box_mgr) => {
 	const body = d3.select("body")
 	for (let state of ["CREATE", "EDIT", "DELETE"]) {
 		body.append("button")
@@ -36,6 +96,17 @@ const addButtons = (box_mgr) => {
 				}
 			})
 	}
+	let input_container = body.append("div")
+	input_container.append("label")
+		.attr("for", "input")
+		.text("FILTER BY NAME: ")
+		.style("font-size", "12px")
+	input_container.append("input")
+		.attr("id", "input")
+		.attr("type", "text")
+		.on("input", () => {
+			updateLines(box_mgr.xScale, box_mgr.yScale, box_mgr.filters, box_mgr.params);
+		});
 }
 
 // Draw outer SVG container and inner plot container
@@ -98,13 +169,14 @@ const addAxes = (plotContainer, xScale, yScale, params) => {
 		.attr("font-size", "1.2em")
 		.attr("font-weight", "bold")
 		.text("Screen Time of Top 100 Celebrities in the 2010s")
-
 }
 
+// Helper function to capitalize names
 const capitalize = (name) => {
 	return name.split(" ").map(n => n.slice(0, 1).toUpperCase() + n.slice(1)).join(" ")
 }
 
+// Helper to highlight the labels of the series
 const highlightLabel = (e, target, xScale, yScale, params) => {
 	let txt_width = d3.select(target)
 		.attr("font-weight", "bold").node().getComputedTextLength();
@@ -128,6 +200,7 @@ const highlightLabel = (e, target, xScale, yScale, params) => {
 		.attr("class", "label-background")
 }
 
+// Helper to un-highlight labels of series
 const unhighlightLabel = (e, target, xScale, yScale, params) => {
 	d3.select(target).attr("font-weight", "normal")
 		.attr("stroke", null)
@@ -149,15 +222,13 @@ const makeLines = (plotContainer, xScale, yScale, grouped_cable, params) => {
 		.x(d => xScale(d.month))
 		.y(d => yScale(d.screen_time))
 
-
 	const lines = plotContainer.append("g")
 		.attr("id", "series-group")
 		.selectAll(".series")
 		.data(grouped_cable, d => d.name)
 		.enter()
 		.append("g")
-		.attr("class", "series")
-			
+		.attr("class", "series")	
 	
 	lines.append("path")
 		.attr("class", "line")
@@ -165,7 +236,6 @@ const makeLines = (plotContainer, xScale, yScale, grouped_cable, params) => {
       	.attr("fill", "none")
         .attr("stroke", "firebrick")
         .attr("stroke-width", 1.5)
-
 
     lines.append("text")
     	.attr("class", "line-label")
@@ -177,6 +247,8 @@ const makeLines = (plotContainer, xScale, yScale, grouped_cable, params) => {
     	.on("mouseout", function(e) {unhighlightLabel(e, this, xScale, yScale, params)})
 }
 
+// Filter data point using all the timebox filters
+// RETURNS: true if line passes through all filters, false otherwise
 const filterSeries = (d, filts) => {
 	let values = d.values;
 	for (let filt of filts) {
@@ -199,8 +271,16 @@ const filterSeries = (d, filts) => {
 	return true;
 }
 
+const filterByName = (d, str) => {
+	if (str === "" || !str) return true;
+	return d.name.toLowerCase().includes(str.toLowerCase());
+}
+
+// Filters all series by the timeboxes
 const updateLines = (xScale, yScale, filts, params) => {
-	if (filts.length == 0) {
+	let searchParam = d3.select("#input").node().value;
+	// If no filters, then highlight all the lines
+	if (filts.length == 0 && searchParam === "") {
 		let series = d3.selectAll(".series")
 		series.select(".line")
 			.attr("stroke", "firebrick")
@@ -208,6 +288,7 @@ const updateLines = (xScale, yScale, filts, params) => {
 			.attr("fill", "black")
 			.on("mouseover", function(e) {highlightLabel(e, this, xScale, yScale, params)})
 	    	.on("mouseout", function(e) {unhighlightLabel(e, this, xScale, yScale, params)})
+	// Otherwise, apply the filters to determine which series to highlight
 	} else {
 		let series = d3.selectAll(".series")
 		series.select(".line")
@@ -216,21 +297,20 @@ const updateLines = (xScale, yScale, filts, params) => {
 			.attr("fill", "rgba(180, 180, 180, 0.5)")
 			.on("mouseover", null)
 			.on("mouseout", null)
-		
-		let filtered = series.filter(d => filterSeries(d, filts))
-		
+		let filtered = series
+			.filter(d => filterSeries(d, filts))
+			.filter(d => filterByName(d, searchParam));
 		filtered.raise()
 			.select(".line")
 			.attr("stroke", "firebrick")
-
 		filtered.select(".line-label")
 			.attr("fill", "black")
 			.on("mouseover", function(e) {highlightLabel(e, this, xScale, yScale, params)})
 	    	.on("mouseout", function(e) {unhighlightLabel(e, this, xScale, yScale, params)})
 	}
-	
 }
 
+// Add "drag" to SVG to allow drawing timeboxes
 const addCreateHandler = (box_mgr) => {
     box_mgr.outer.call(d3.drag()
     	.subject((e) => { 
@@ -255,12 +335,13 @@ const addCreateHandler = (box_mgr) => {
     )
 }
 
-// Select all boxes and add the resize and drag handlers.
+// Select all boxes and add the resize and movement handlers.
 const addResize = (box_mgr) => {
 	for (let box of box_mgr.boxes) {
 		let circ = box_mgr.plot.append("circle")
 			.attr("class", "resize-handle");
 		
+		// Add resize handle to the top left corner of rectangles
 		circ.attr("r", 5)
 			.attr("cx", box.x1)
 			.attr("cy", box.y1)
@@ -276,10 +357,9 @@ const addResize = (box_mgr) => {
 					if (box.y0 < box.y1) [box.y0, box.y1] = [box.y1, box.y0];
 					removeResize(box_mgr);
 					addResize(box_mgr);
-				})
+				}))
 
-			)
-
+		// Add drag handle to rectangles
 		box.rect.style("cursor", "grab")
 			.call(d3.drag()
 				.on("start", (e) => {
@@ -295,6 +375,7 @@ const addResize = (box_mgr) => {
 	}
 }
 
+// Remove resize and drag handles from rectangles
 const removeResize = (box_mgr) => {
 	try {
 		box_mgr.plot.selectAll(".resize-handle").remove();
@@ -461,5 +542,5 @@ class BoxManager {
 	}
 }
 
-export { fetchData, addButtons, makeContainer, makeScales, 
+export { displayIntro, fetchData, addControls, makeContainer, makeScales, 
 	addAxes, BoxManager, makeLines };
