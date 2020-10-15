@@ -18,7 +18,7 @@ const displayIntro = () => {
 		.text("Welcome to TimeSearcher!")
 
 	msg.append("p")
-		.text("Draw, edit and delete time boxes to filter the data.")
+		.text("Draw, edit and delete time boxes to filter the Cable TV News dataset.")
 	msg.append("p")
 		.text("Use the buttons to toggle between controls.")
 
