@@ -54,3 +54,18 @@ svg {
 svg:hover {
 	cursor: crosshair;
 }
+
+footer div {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: fixed;
+	bottom: 10px;
+	text-align: center;
+	width: 100%;
+}
+
+footer div p {
+	display: block;
+	font-size: 10px;
+}
